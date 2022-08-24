@@ -1,0 +1,206 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+
+<div class="row" ng-app="myApp" ng-controller="myCtrl">
+    <div class="col-md-12" ng-init="GetAllData()">
+
+        @*Data Table Section*@
+
+        <div class="col-md-8">
+            <h2>Employee List</h2>
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th>Id</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Age</th>
+                        <th>Gender</th>
+                        <th>Join Date</th>
+                        <th>Image</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="emp in employees">
+
+                        <td>{{emp.EmployeeId}}</td>
+
+                        <td>{{emp.EmployeeName}}</td>
+
+                        <td>{{emp.DepartmentName}}</td>
+
+                        <td>{{emp.EmployeeAge}}</td>
+
+                        <td>{{emp.Gender}}</td>
+
+                        <td>{{emp.JoinDate.substring(6, 19) | date:'yyyy-MM-dd'}}</td>
+
+                        <td>{{emp.PicturePath}}</td>
+                        <td>
+                            <button type="button" class="btn btn-info" ng-click="EditEmp(emp)">Edit</button>
+                            <button type="button" class="btn btn-danger" ng-click="DeleteEmp(emp)">Delete</button>
+                        </td>
+                    </tr>
+                </tbody>
+
+            </table>
+            
+
+        </div>
+
+        @*Form Input Section*@
+
+        <div class="col-md-4" ng-form="frmEmp">
+            <h2>Add of Update Employee</h2>
+
+            <div class="form-group row">
+                <label class="control-label col-md-3">Name</label>
+                <div class="col-md-9">
+                    <input type="text" ng-model="current.EmployeeName" class="form-control" />
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="control-label col-md-3">Department</label>
+                <div class="col-md-9">
+                    <select class="form-control" ng-model="current.DepartmentId"
+                            ng-options="x.DepartmentId as x.DepartmentName for x in department" ng-required="true">
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="control-label col-md-3">Age</label>
+                <div class="col-md-9">
+                    <input type="text" ng-model="current.EmployeeAge" class="form-control" />
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="control-label col-md-3">Join Date</label>
+                <div class="col-md-9">
+                    <input type="date" ng-model="current.JoinDate" class="form-control" />
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="control-label col-md-3">Gender</label>
+                <div class="col-md-9">
+                    <input type="radio" name="gender" ng-model="current.Gender" value="Male" /> Male
+                    <input type="radio" name="gender" ng-model="current.Gender" value="Female" /> Female
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <label class="control-label col-md-3">Picture</label>
+                <div class="col-md-9">
+                    <input type="file" ng-model="current.PicturePath" class="form-control" />
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <div class="col-md-9 col-md-offset-3">
+                    <button class="btn btn-primary" ng-click="insert()" ng-disabled="frmEmp.$invalid" ng-hide="isEdit">Insert</button>
+                    <button class="btn btn-primary" ng-click="insert()" ng-disabled="frmEmp.$invalid" ng-show="isEdit">Update</button>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+</div>
+
+
+@section scripts{
+
+    <script src="~/Scripts/angular.js"></script>
+
+    <script>
+        angular.module("myApp", [])
+            .controller("myCtrl", function ($scope, $http) {
+                $scope.employee = [];
+                $scope.current = null;
+                $scope.isEdit = false;
+
+                $scope.GetAllData = function () {
+                    $scope.GetEmployees();
+                    $scope.GetDepartments();
+                }
+
+                // For Get Employees
+
+                $scope.GetEmployees = function () {
+                    $http({
+                        method: "get",
+                        url: "https://localhost:44341/Home/GetAllEmployees"
+                    }).then(function (response) {
+                        $scope.employees = response.data;
+                    });
+                }
+
+                // For Get Departments
+
+                $scope.GetDepartments = function () {
+                    $http({
+                        method: "get",
+                        url: "https://localhost:44341/Home/GetDepartments"
+                    }).then(function (response) {
+                        $scope.department = response.data;
+                    });
+                }
+
+
+                // For Insert Employee
+
+                $scope.insert = function () {
+                    var newEmployee = angular.copy($scope.current);
+                    $http.post("https://localhost:44341/Home/SaveEmp", newEmployee)
+                        .then(function (response) {
+                            $scope.employees.push(response.data);
+       
+                            $scope.current = null;
+                            $scope.GetAllData();
+                        });
+                }
+
+                // For edit Employee
+
+                $scope.EditEmp = function (emp) {
+                    $scope.current = emp;
+                    $scope.current.JoinDate = $scope.ConvertToDate(emp.JoinDate);
+                    $scope.isEdit = true;
+                }
+
+
+                // For Date
+
+                $scope.ConvertToDate = function (strDate) {
+                    var d = new Date();
+                    var strTime = strDate.substring(6, 19);
+                    var nTime = parseInt(strTime);
+                    d = new Date(nTime)
+                    return d;
+                }
+
+
+                //For Delete
+
+                $scope.DeleteEmp = function (emp) {
+                    $http({
+                        method: "post",
+                        url: "https://localhost:44341/Home/DeleteEmp",
+                        datatype: "json",
+                        data: JSON.stringify({ id: emp.EmployeeId })
+                    }).then(function (response) {
+                        alert(response.data);
+                        $scope.GetAllData();
+                    });
+                }
+
+            })
+    </script>
+
+
+}
